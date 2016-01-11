@@ -1,0 +1,43 @@
+# Remove header garbage
+sed -i -e 's/^<?php if(!isset(.*?><?php/<?php/g' ${filename}
+sed -e 's/^<?php.*isset.*eval.*?>\s\?<?php/<?php/1'
+sed -i.bak -e 's/^<?php.*isset.*eval.*?>$/\n/1' ${f}
+sed -i.sedbak -e '1s/<?php.*strtoupper.*isset.*eval.*(.*).*;.*?> \?//' ${f}
+
+# Look for garbage for <?php
+#####grep --line-number -r '^.\+<?php' public_html | grep 'php:1: ' | sed 's/:1:.*php$//'
+
+
+# Files with GLOABLS references
+grep '$GLOBALS\[.*$GLOBALS\[.*$GLOBALS' . --include='*.php' --color -r --files-with-matches
+grep '$GLOBALS\[.\(.*\).].*$GLOBALS\[.\1.\]' . --include='*.php' --color -r
+grep --color -r --include='*.php' '$GLOBALS\[$GLOBALS\[.\w\+.\]' .
+grep -E '(GLOBALS\[.[a-z,0-9]+.\])(.*\1.*\1.*\1.*\1)+' . --include='*.php' --color -r
+
+updatedb && locate '.php' | grep '\/[a-z]\+[0-9]\+\.php$' | grep -v getid3.php | grep '^/home'  | grep -v cf7 | grep -v wf503 | grep -v '/bad/'
+
+grep 'cwd=/home' /var/log/exim_mainlog | awk '{print $3;}' | sed 's/^cwd=//'  | sort | uniq
+
+grep 'eval($\w\+($\w\+($\w\+' . -r --color --include='*.php' . --files-with-matches
+grep 'eval ( ${ $\w\+ }' . -r --color --include='*.php' . --files-with-matches
+grep 'eval\s\?(\( ${\)\? $\w\+ \( }\)\?' . -r --color --include='*.php' .
+
+exiclean() {
+    if [ $# -lt 1 ] ; then
+        echo "usage: exiclean [domain]"
+        return
+    fi
+    exiqgrep -f "@${1}" -i | xargs exim -Mrm
+    exiqgrep -r "@${1}" -i | xargs exim -Mrm
+}
+
+##
+
+exiqgrep -f '\w+_\w+@' -i | xargs exim -Mrm
+exiqgrep -r '\w+_\w+@' -i | xargs exim -Mrm
+
+
+
+##
+
+awk '$3 ~ /^cwd/{print $3}' /var/log/exim_mainlog | sort | uniq -c | sed "s|^ *||g" | sort -nr
